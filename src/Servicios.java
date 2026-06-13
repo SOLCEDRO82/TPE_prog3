@@ -1,20 +1,28 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-
-
+import java.util.Map;
 
 
 public class Servicios {
     private List<Camion> camiones; //ver el private o protected...
     private List<Paquete> paquetes;
+    private Map<String, Paquete> mapaCodigoPaquete;
+    private List<Paquete> paquetesConAlimentos;
+    private List<Paquete> paquetesSinAlimentos;
+    private List<Paquete> paquetesPorUrgencia;
 
     /* Expresar la complejidad temporal del constructor*/
     public Servicios(String pathCamiones, String pathPaquetes) {//recibe las rutas a los archivos .csv{
         this.camiones = new ArrayList<>();
         this.paquetes = new ArrayList<>();
+        this.mapaCodigoPaquete = new HashMap<>();
+        this.paquetesConAlimentos = new ArrayList<>();
+        this.paquetesSinAlimentos = new ArrayList<>();
+        this.paquetesPorUrgencia = new ArrayList<>();
         this.cargarCamiones(pathCamiones);
         this.cargarPaquetes(pathPaquetes);
     }
@@ -54,32 +62,90 @@ public class Servicios {
                         datosPaquete[3].trim().equals("1"),
                         Integer.parseInt(datosPaquete[4].trim())
                 );
-                paquetes.add(p);
+                paquetes.add(p); //los agregamos a un ArrayList gral necesario?
+                mapaCodigoPaquete.put(p.getCodigo_paquete(), p); //los agregamos a un HashMap para la busqueda eficiente
+                if (p.contieneAlimentos()) { // Clasificacamos por alimentos
+                    paquetesConAlimentos.add(p);
+                } else {
+                    paquetesSinAlimentos.add(p);
+                }
+                if (p.getNivel_urgencia() < 0 || p.getNivel_urgencia() > 100) {
+                    System.err.println("Paquete con nivel de urgencia fuera de rango: " + p);
+                } else {
+                    paquetesPorUrgencia.add(p);
+                }
+
+
             }
         } catch (IOException | NumberFormatException e) {
             System.err.println("Error procesando paquetes: " + e.getMessage());
         }
     }
 
-    public List<Camion> getCamiones() {
+    List<Camion> getCamiones() {
         return camiones;
     }
 
-    public List<Paquete> getPaquetes() {
+    List<Paquete> getPaquetes() {
         return paquetes;
     }
 
     /*Dado un còdigo de paquete (String), retornar toda la informaciòn del paquete asociado.
     En caso de no existir, retornar null.
-    Expresar la complejidad temporal del servicio 1 */
+    Expresar la complejidad temporal del servicio 1
+    La complejidad temporal del servicio 1 es O(1) en promedio (generalemente unas estructura de hashing se supone que tiene tan pocas listas vinculadas
+    que el get es màs probable que resuelva accediendo directamente a la estructura primaria
+    que a la lista de rebalse*/
 
     public Paquete servicio1(String codigoPaquete) {
-        for (Paquete paquete : paquetes) {
-            if (paquete.getCodigo_paquete().equals(codigoPaquete)) {
-                return paquete;
-            }
+        /*if (mapaCodigoPaquete.containsKey(codigoPaquete)) {
+            return mapaCodigoPaquete.get(codigoPaquete);
         }
-        return null;
+        else{
+            return null;
+        }*/
+        //existe un metodo propio de la clase Map...
+        return mapaCodigoPaquete.getOrDefault(codigoPaquete, null);
     }
 
+    /*
+     * Expresar la complejidad temporal del servicio 2.
+     * La complejidad temporal del servicio 1 es O(1)
+     * se evalua una condicion y se retorna la referencia de la lista que corresponde
+     */
+    public List<Paquete> servicio2(boolean contieneAlimentos) {
+        if (contieneAlimentos) {
+            return paquetesConAlimentos;
+            // return new ArrayList<>(paquetesConAlimentos);
+            //tengo que hacer una copia de la lista para que no se modifique la lista original?
+        } else {
+            return paquetesSinAlimentos;
+        }
+    }
+
+    /*
+     * Expresar la complejidad temporal del servicio 3.
+     */
+    public List<Paquete> servicio3(int urgenciaMinima, int urgenciaMaxima) {
+        List<Paquete> paquetesRetorno = new ArrayList<>();
+        for (Paquete p : paquetes) {
+            if (p.getNivel_urgencia() >= urgenciaMinima &&
+                    p.getNivel_urgencia() <= urgenciaMaxima) {
+                paquetesRetorno.add(p);
+            }
+        }
+        return paquetesRetorno;
+    }
+
+    /* se podria usar una lista de factoreo para almacenar en una primera carga los paquetes
+    a partir de su nivel de urgencia, sabiendo que el rango va de 1 a 100? siendo el indice del arreglo el nivel de urgencia
+    y el valor una lista de paquetes con ese nivel de urgencia
+    luego en el servicio 3 se accede con menor complejidad a los paquetes de ese nivel?
+
+    Consultando esto mismo con IA me recomiendo que utilice TreeMap, entiendo el concepto pero al no haberlo utilizado en la
+    catedra no se si realmente se busca una implementacion distinta intentando decidir por un servicio
+    sobre el otro.
+     */
 }
+
+

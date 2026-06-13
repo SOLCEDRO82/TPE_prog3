@@ -25,7 +25,7 @@ public class Paquete {
         return peso_kg;
     }
 
-    public boolean isContiene_alimentos() {
+    public boolean contieneAlimentos() {
         return contiene_alimentos;
     }
 
