@@ -13,16 +13,29 @@ public class Servicios {
     private Map<String, Paquete> mapaCodigoPaquete;
     private List<Paquete> paquetesConAlimentos;
     private List<Paquete> paquetesSinAlimentos;
-    private List<Paquete> paquetesPorUrgencia;
+    private List<Paquete>[] paquetesPorUrgencia;
 
-    /* Expresar la complejidad temporal del constructor*/
+    /* Expresar la complejidad temporal del constructor
+     * Complejidad temporal:
+     * Inicialización de estructuras: O(1).
+     * Cargar camiones desde archivo: O(n), donde n es la cantidad de camiones.
+     * Cargar paquetes desde archivo: O(m), donde m es la cantidad de paquetes.
+     * Complejidad total: O(n + m).
+     */
     public Servicios(String pathCamiones, String pathPaquetes) {//recibe las rutas a los archivos .csv{
         this.camiones = new ArrayList<>();
         this.paquetes = new ArrayList<>();
+
         this.mapaCodigoPaquete = new HashMap<>();
+
         this.paquetesConAlimentos = new ArrayList<>();
         this.paquetesSinAlimentos = new ArrayList<>();
-        this.paquetesPorUrgencia = new ArrayList<>();
+
+        this.paquetesPorUrgencia= new ArrayList[101];
+        for (int i = 0; i <= 100; i++) {
+            paquetesPorUrgencia[i] = new ArrayList<>();
+        }
+
         this.cargarCamiones(pathCamiones);
         this.cargarPaquetes(pathPaquetes);
     }
@@ -69,83 +82,73 @@ public class Servicios {
                 } else {
                     paquetesSinAlimentos.add(p);
                 }
-                if (p.getNivel_urgencia() < 0 || p.getNivel_urgencia() > 100) {
-                    System.err.println("Paquete con nivel de urgencia fuera de rango: " + p);
-                } else {
-                    paquetesPorUrgencia.add(p);
+                int urgencia = p.getNivel_urgencia();
+                if (urgencia >= 1 && urgencia <= 100) {
+                    paquetesPorUrgencia[urgencia].add(p);
                 }
-
-
             }
         } catch (IOException | NumberFormatException e) {
             System.err.println("Error procesando paquetes: " + e.getMessage());
         }
     }
 
-    List<Camion> getCamiones() {
-        return camiones;
-    }
-
-    List<Paquete> getPaquetes() {
-        return paquetes;
-    }
-
-    /*Dado un còdigo de paquete (String), retornar toda la informaciòn del paquete asociado.
-    En caso de no existir, retornar null.
+    /*
     Expresar la complejidad temporal del servicio 1
-    La complejidad temporal del servicio 1 es O(1) en promedio (generalemente unas estructura de hashing se supone que tiene tan pocas listas vinculadas
+    *Complejidad temporal:
+    *La complejidad temporal del servicio 1 es O(1) en promedio
+    *Generalemente una estructura de hashing se supone que tiene tan pocas listas vinculadas
     que el get es màs probable que resuelva accediendo directamente a la estructura primaria
-    que a la lista de rebalse*/
+    que a la lista de rebalse.
+    */
 
     public Paquete servicio1(String codigoPaquete) {
         /*if (mapaCodigoPaquete.containsKey(codigoPaquete)) {
             return mapaCodigoPaquete.get(codigoPaquete);
-        }
-        else{
+        }else{
             return null;
-        }*/
-        //existe un metodo propio de la clase Map...
+        }
+        existe un metodo propio de la clase Map...*/
         return mapaCodigoPaquete.getOrDefault(codigoPaquete, null);
     }
 
     /*
      * Expresar la complejidad temporal del servicio 2.
-     * La complejidad temporal del servicio 1 es O(1)
-     * se evalua una condicion y se retorna la referencia de la lista que corresponde
+     * Complejidad temporal:
+     * La complejidad temporal del servicio  es O(1).
+     * Separamos en listas al momento de la cargar para luego tener el acceso directo.
+     * Se evalua una condicion y se retorna la referencia de la lista que corresponde.
      */
     public List<Paquete> servicio2(boolean contieneAlimentos) {
         if (contieneAlimentos) {
-            return paquetesConAlimentos;
+            return paquetesConAlimentos;//List.copyOf(paquetesConAlimentos); para devolver una copia inmutable de las listas
             // return new ArrayList<>(paquetesConAlimentos);
-            //tengo que hacer una copia de la lista para que no se modifique la lista original?
+            //tengo que hacer una copia de la lista para
+            // que no se modifique la lista original?ENCAPSULAMIENTO??
         } else {
             return paquetesSinAlimentos;
         }
     }
 
     /*
-     * Expresar la complejidad temporal del servicio 3.
-     */
+     Expresar la complejidad temporal del servicio 3.
+     *Complejidad temporal:
+     *Acceder a las posiciones para cada nivel_urgencia dentro del rango O(1).
+     * Utilizamos un arrayList ordenado en la carga por nivel de urgencia, esto hace que
+     * a la hora de buscar por un rango se pueda acceder directamente al indice que corresponde del rango que se solicita.
+     * Iterar spbre el rango (r) donde r es la cantidad de nivel_urgencia dentro del rango.
+     * O(r) + O(p) donde p es el numero de paquetes que se selecciona y se copia a la lista de retorno.
+   */
+
     public List<Paquete> servicio3(int urgenciaMinima, int urgenciaMaxima) {
         List<Paquete> paquetesRetorno = new ArrayList<>();
-        for (Paquete p : paquetes) {
-            if (p.getNivel_urgencia() >= urgenciaMinima &&
-                    p.getNivel_urgencia() <= urgenciaMaxima) {
-                paquetesRetorno.add(p);
-            }
+
+        for (int i = urgenciaMinima; i <= urgenciaMaxima; i++) { //se itera sobre el rango solicitado
+            paquetesRetorno.addAll(paquetesPorUrgencia[i]);
         }
+
         return paquetesRetorno;
     }
 
-    /* se podria usar una lista de factoreo para almacenar en una primera carga los paquetes
-    a partir de su nivel de urgencia, sabiendo que el rango va de 1 a 100? siendo el indice del arreglo el nivel de urgencia
-    y el valor una lista de paquetes con ese nivel de urgencia
-    luego en el servicio 3 se accede con menor complejidad a los paquetes de ese nivel?
-
-    Consultando esto mismo con IA me recomiendo que utilice TreeMap, entiendo el concepto pero al no haberlo utilizado en la
-    catedra no se si realmente se busca una implementacion distinta intentando decidir por un servicio
-    sobre el otro.
-     */
 }
 
 
